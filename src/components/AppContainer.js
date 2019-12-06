@@ -16,6 +16,8 @@ import AboutAlert from './Alerts/AboutAlert'
 
 import { cancelCurrentRequests } from '../lib/api'
 
+const isMediaPage = (url) => matchPath(url, { path: '/series/:id/:media', exact: true })
+
 class AppContainer extends Component {
   constructor (props) {
     super(props)
@@ -25,13 +27,19 @@ class AppContainer extends Component {
   }
 
   async componentDidMount () {
-    const { dispatch, history } = this.props
+    const { dispatch, Auth, history } = this.props
     // cancel requests on page change
-    this.unlisten = history.listen(() => cancelCurrentRequests())
+    this.unlisten = history.listen(() => {
+      // do not cancel media page requests
+      if (!isMediaPage(this.props.location.pathname)) cancelCurrentRequests()
+    })
 
     // init session
     try {
-      await dispatch(startSession())
+      // only request a new session if new session or expires
+      if (!Auth.session_id || (Auth.session_id && Auth.expires && new Date() > new Date(Auth.expires)) || (!Auth.guest && !Auth.user_id)) {
+        await dispatch(startSession())
+      }
       this.setState({ initSession: true })
     } catch (e) {
       console.error(e)
@@ -46,8 +54,9 @@ class AppContainer extends Component {
   componentDidUpdate (prevProps) {
     const {location: from} = prevProps
     const {dispatch, Auth, location: to} = this.props
+
     // check if not to same page and not from some pages
-    if (from && from.pathname !== to.pathname) {
+    if (from && from.pathname !== to.pathname && !isMediaPage(from.pathname)) {
       window.scrollTo(0, 0)
     }
 
@@ -63,7 +72,8 @@ class AppContainer extends Component {
 
   render () {
     const { initSession } = this.state
-    const { dispatch, Auth, theme, children, error, location: { pathname } } = this.props
+    const { dispatch, Auth, theme, showPremiumAlert, children, error, location: { pathname } } = this.props
+
     const isLoginPage = matchPath(pathname, { path: '/login', exact: true })
     const isSeriesPage = matchPath(pathname, { path: '/series/:id', exact: true })
 
@@ -92,7 +102,7 @@ class AppContainer extends Component {
             </Alert>
             : null }
           { !isLoginPage && !isSeriesPage ? <AboutAlert /> : null }
-          { !Auth.premium && !isLoginPage && !isSeriesPage
+          { !Auth.premium && !isLoginPage && !isSeriesPage && showPremiumAlert
             ? <Alert color='info' className='d-flex align-items-center'>
               You are not logged in to a Crunchyroll Premium account! Please login to enjoy all of the library that Crunchyroll has to offer.
               <Button
@@ -116,6 +126,7 @@ export default compose(
   withRouter,
   connect((store) => {
     return {
+      showPremiumAlert: store.Options.showPremiumAlert,
       theme: store.Options.theme,
       error: store.Data.error,
       Auth: store.Auth

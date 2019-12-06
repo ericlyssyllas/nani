@@ -3,7 +3,11 @@
 import axios, { isCancel } from 'axios'
 import { omit } from 'lodash'
 
+import { matchPath } from 'react-router'
+
 import api, { ACCESS_TOKEN, DEVICE_TYPE, LOCALE, VERSION } from '../lib/api'
+
+import { batch } from 'react-redux'
 
 import { logout, startSession } from './Auth'
 import { push, replace } from 'connected-react-router'
@@ -47,9 +51,13 @@ export const handleError = async (err, dispatch, state, reject) => {
         case 'bad_session': { // when the session has expired?
           // create a new session
           await dispatch(startSession())
-          // move to an empty page and then back
-          await dispatch(push('/empty'))
-          await dispatch(replace(path))
+
+          // move to an empty page and then back if not on the media page
+          const isMediaPage = matchPath(path, { path: '/series/:id/:media', exact: true })
+          if (!isMediaPage) {
+            await dispatch(push('/empty'))
+            await dispatch(replace(path))
+          }
           break
         }
         case 'bad_request': { // when removed from the devices and the like
@@ -159,7 +167,7 @@ export const addAniListItem = (id, data) => ({
   }
 })
 
-const addIdCheckBulk = (id, obj, action) => ({
+export const addIdCheckBulk = (id, obj, action) => ({
   type: action,
   // eslint-disable-next-line array-callback-return
   payload: obj.reduce((result, item) => {
@@ -172,7 +180,7 @@ const addIdCheckBulk = (id, obj, action) => ({
   }, {})
 })
 
-const addIdArr = ({ id, arr }, action) => ({
+export const addIdArr = ({ id, arr }, action) => ({
   type: action,
   payload: {
     [id]: arr
@@ -213,10 +221,12 @@ export const getQueue = (force) => (dispatch, getState) => {
       if (resp.data.error) throw resp
 
       const data = resp.data.data
-      dispatch(setQueue(data))
-      dispatch(addSeriesBulk(data.map((d) => d.series)))
-      dispatch(addMediaBulk(data.map((d) => d.most_likely_media)))
-      dispatch(addMediaBulk(data.map((d) => d.last_watched_media)))
+      batch(() => {
+        dispatch(setQueue(data))
+        dispatch(addSeriesBulk(data.map((d) => d.series)))
+        dispatch(addMediaBulk(data.map((d) => d.most_likely_media)))
+        dispatch(addMediaBulk(data.map((d) => d.last_watched_media)))
+      })
       resolve()
     } catch (err) {
       await handleError(err, dispatch, state, reject)
@@ -254,9 +264,11 @@ export const getHistory = ({limit = 24, offset = 0} = {}, append = false, force 
           ...data
         ]))
       }
-      dispatch(addSeriesBulk(data.map((d) => d.series)))
-      dispatch(addCollectionBulk(data.map((d) => d.collection)))
-      dispatch(addMediaBulk(data.map((d) => d.media)))
+      batch(() => {
+        dispatch(addSeriesBulk(data.map((d) => d.series)))
+        dispatch(addCollectionBulk(data.map((d) => d.collection)))
+        dispatch(addMediaBulk(data.map((d) => d.media)))
+      })
       resolve(data)
     } catch (err) {
       await handleError(err, dispatch, state, reject)
@@ -282,8 +294,10 @@ export const search = (q) => (dispatch, getState) => {
       if (resp.data.error) throw resp
 
       const data = resp.data.data
-      dispatch(addSeriesBulk(data.map((d) => d)))
-      dispatch(setSearchIds(data.map((d) => d.series_id)))
+      batch(() => {
+        dispatch(addSeriesBulk(data.map((d) => d)))
+        dispatch(setSearchIds(data.map((d) => d.series_id)))
+      })
       resolve()
     } catch (err) {
       await handleError(err, dispatch, state, reject)
@@ -332,9 +346,11 @@ export const getCollectionsForSeries = (id) => (dispatch, getState) => {
       if (resp.data.error) throw resp
 
       const data = resp.data.data
-      dispatch(addCollectionBulk(data.map((d) => d)))
-      dispatch(addSeriesCollection({id, arr: data.map((d) => d.collection_id)}))
-      resolve()
+      batch(() => {
+        dispatch(addCollectionBulk(data.map((d) => d)))
+        dispatch(addSeriesCollection({id, arr: data.map((d) => d.collection_id)}))
+      })
+      resolve(data)
     } catch (err) {
       await handleError(err, dispatch, state, reject)
     }
@@ -346,7 +362,7 @@ export const getMediaForCollection = (id) => (dispatch, getState) => {
   const params = {
     session_id: state.Auth.session_id,
     collection_id: id,
-    include_clips: 1,
+    include_clips: 0,
     limit: 5000,
     offset: 0,
     fields: MEDIA_FIELDS
@@ -360,11 +376,13 @@ export const getMediaForCollection = (id) => (dispatch, getState) => {
       if (resp.data.error) throw resp
 
       const data = resp.data.data
-      dispatch(addMediaBulk(data.map((d) => d)))
-      dispatch(addCollectionMedia({id, arr: data.map((d) => d.media_id)}))
+      batch(() => {
+        dispatch(addMediaBulk(data.map((d) => d)))
+        dispatch(addCollectionMedia({id, arr: data.map((d) => d.media_id)}))
+      })
       resolve()
     } catch (err) {
-      reject(err)
+      await handleError(err, dispatch, state, reject)
     }
   })
 }
@@ -388,7 +406,7 @@ export const getMediaInfo = (id) => (dispatch, getState) => {
       dispatch(addMedia(data))
       resolve(data)
     } catch (err) {
-      reject(err)
+      await handleError(err, dispatch, state, reject)
     }
   })
 }
@@ -406,8 +424,10 @@ export const updateSeriesQueue = ({id, inQueue}) => (dispatch, getState) => {
       const resp = await api({method: 'post', route: inQueue ? 'remove_from_queue' : 'add_to_queue', data: form, locale: state.Options.language, noCancel: true})
       if (resp.data.error) throw resp
 
-      dispatch(getQueue(true))
-      dispatch(updateSeriesQueueData(id, !inQueue))
+      batch(() => {
+        dispatch(getQueue(true))
+        dispatch(updateSeriesQueueData(id, !inQueue))
+      })
       resolve()
     } catch (err) {
       await handleError(err, dispatch, state, reject)
@@ -468,7 +488,8 @@ export const updatePlaybackTime = (time, id) => (dispatch, getState) => {
       dispatch(setPlayheadTime(time, id))
       resolve()
     } catch (err) {
-      await handleError(err, dispatch, state, reject)
+      console.error(err)
+      reject(err)
     }
   })
 }
@@ -492,9 +513,11 @@ export const getRecent = (noCancel = false) => (dispatch, getState) => {
       if (resp.data.error) throw resp
 
       const data = resp.data.data
-      dispatch(addMediaBulk(data.map((d) => d.most_recent_media)))
-      dispatch(addSeriesBulk(data.map((d) => omit(d, 'most_recent_media'))))
-      dispatch(setRecent(data))
+      batch(() => {
+        dispatch(addMediaBulk(data.map((d) => d.most_recent_media)))
+        dispatch(addSeriesBulk(data.map((d) => omit(d, 'most_recent_media'))))
+        dispatch(setRecent(data))
+      })
       resolve()
     } catch (err) {
       await handleError(err, dispatch, state, reject)

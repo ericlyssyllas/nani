@@ -12,10 +12,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { startCase } from 'lodash'
 import moment from 'moment'
 
+import Collection from '../components/Collections/Collection'
 import SeriesCollection from '../components/Collections/SeriesCollection'
-import Loading from '../components/Loading/Loading'
 import QueueButton from '../components/Buttons/QueueButton'
 import ImageLoader from '../components/Loading/ImageLoader'
+import LoadingSeriesPage from '../components/Loading/LoadingSeriesPage'
 
 import withProxy, { replaceHttps } from '../lib/withProxy'
 
@@ -90,7 +91,11 @@ class Series extends Component {
 
     // load the latest collection
     if (token && latestCollection) {
-      dispatch(getAniListItem(latestCollection.name, latestCollectionId))
+      try {
+        dispatch(getAniListItem(latestCollection.name, latestCollectionId))
+      } catch (e) {
+        console.error(e)
+      }
     }
 
     // check if the collection has been loaded
@@ -114,6 +119,8 @@ class Series extends Component {
       }
     }
 
+    const isSmallScreen = window.matchMedia('(max-width: 576px)').matches
+
     return (
       <Fragment>
         <Helmet defer={false}>
@@ -122,7 +129,7 @@ class Series extends Component {
         { <h1 className='col-sm-12 text-center text-danger'>{error}</h1> || null }
         { !loaded
           ? (
-            <Loading />
+            <LoadingSeriesPage />
           )
           : (
             <Fragment>
@@ -138,12 +145,12 @@ class Series extends Component {
                 <Card className='border-0 over-banner'>
                   <CardBody className='main-details-card-body'>
                     <div className='row'>
-                      <div className='col-sm-4 col-lg-3'>
-                        <div className='sticky-poster'>
+                      <div className='col-sm-4 col-lg-3' style={isSmallScreen ? { marginTop: '-100px' } : {}}>
+                        <div>
                           <Img loader={<ImageLoader height={300} />} src={portraitImgFullURL ? [
                             withProxy(portraitImgFullURL),
                             replaceHttps(portraitImgFullURL)
-                          ] : 'https://via.placeholder.com/640x960?text=No+Image'} alt={series.name} className='img-fluid shadow-sm' />
+                          ] : 'https://via.placeholder.com/640x960?text=No+Image'} alt={series.name} className='img-fluid shadow-sm w-100' />
                           <QueueButton id={id} block className='mt-2' />
                         </div>
                       </div>
@@ -169,14 +176,22 @@ class Series extends Component {
                             )
                           }
                         </div>
-                        {seriesCollection.map((collectionId) =>
+                        {seriesCollection.map((collectionId, index) =>
                           <SeriesCollection
+                            index={index}
                             key={`seriesCollection-${collectionId}`}
                             defaultLoaded={collectionId === loadedCollection}
                             id={collectionId}
                             showTitle={seriesCollection.length > 1}
                             title={collections[collectionId].name} />
                         )}
+                        {!seriesCollection.length
+                          ? (
+                            <div className='mt-4'>
+                              <Collection loading perPage={3} showTitle titleTag='h4' title={series.name} />
+                            </div>
+                          )
+                          : null}
                       </div>
                     </div>
                   </CardBody>

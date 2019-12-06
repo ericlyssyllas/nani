@@ -25,9 +25,11 @@ class SeriesCollection extends Component {
     const { defaultLoaded, hash } = this.props
     if (defaultLoaded && !loaded) {
       await this.load()
-      if (hash) {
+
+      const el = document.getElementById(hash)
+      if (hash && el) {
         // scroll to the hash
-        setTimeout(() => document.getElementById(hash).scrollIntoView({ behavior: 'smooth' }), 0)
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 0)
       }
       this.setState({ expanded: true })
     }
@@ -55,7 +57,7 @@ class SeriesCollection extends Component {
 
   render () {
     const { loaded, expanded, order } = this.state
-    const { title, collectionMedia, id, orderControls, perPage = 3 } = this.props
+    const { title, collectionMedia, id, orderControls, perPage = 3, defaultLoaded } = this.props
     return (
       <div className='mt-4'>
         <h4 className='border-bottom pb-3' style={{ cursor: 'pointer', userSelect: 'none' }} onClick={this.toggleExpanded}>
@@ -83,14 +85,21 @@ class SeriesCollection extends Component {
                 <div className='mb-4' />
 
                 <Collection
-                mediaIds={loaded && collectionMedia[id] ? collectionMedia[id] : []}
-                order={order}
-                loading={!loaded && !collectionMedia[id]}
-                perPage={perPage}
-                showTitle={false} />
+                  mediaIds={loaded && collectionMedia[id] ? collectionMedia[id] : []}
+                  order={order}
+                  loading={!loaded && !collectionMedia[id]}
+                  perPage={perPage}
+                  showTitle={false}
+                  mediaPage />
               </Fragment>
             )
-            : null
+            : !loaded && defaultLoaded ? (
+                <Collection
+                  loading
+                  perPage={perPage}
+                  showTitle={false}
+                  mediaPage />
+              ) : null
         }
       </div>
     )

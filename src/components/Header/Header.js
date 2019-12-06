@@ -6,12 +6,10 @@ import { withRouter, Link } from 'react-router-dom'
 
 import {
   Collapse,
-  Container,
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
   Nav,
-  Navbar,
   NavbarBrand,
   NavbarToggler,
   NavItem,
@@ -39,8 +37,8 @@ class Header extends Component {
     const { collapsed } = this.state
     const { dispatch, location, Auth } = this.props
     return (
-      <Navbar color='dark' expand='md' dark className='mb-4' sticky='top'>
-        <Container>
+      <nav className='mb-4 navbar navbar-expand-md fixed-top navbar-dark bg-dark'>
+        <div className='container'>
           <NavbarBrand tag={Link} to='/'>
             <div className='logo d-md-none d-lg-inline-block' style={{ width: '2rem', height: '2rem' }} />
             {' '}
@@ -99,6 +97,13 @@ class Header extends Component {
                   </DropdownItem>
                 </DropdownMenu>
               </UncontrolledDropdown>
+              <NavItem>
+                <NavLink disabled={Auth.guest} tag={Link} to={'/manga'}>
+                  <FontAwesomeIcon icon='book' className='d-md-none d-lg-inline-block' />
+                  {' '}
+                  Manga
+                </NavLink>
+              </NavItem>
             </Nav>
             <Nav className='ml-auto' navbar>
               <NavItem className='dropdown'>
@@ -128,8 +133,8 @@ class Header extends Component {
               </NavItem>
             </Nav>
           </Collapse>
-        </Container>
-      </Navbar>
+        </div>
+      </nav>
     )
   }
 }

@@ -6,10 +6,13 @@ import {
   loginMal,
   removeAniList,
   removeMal,
+  setHomepageContinueCount,
   setLanguage,
   setTheme,
   toggleAutoplay,
-  toggleOrderControls
+  toggleAutoTheme,
+  toggleOrderControls,
+  togglePremiumAlert
 } from '../../actions'
 
 import {
@@ -30,7 +33,7 @@ import {
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import './Options.css'
+import './Options.scss'
 
 class Options extends Component {
   constructor (props) {
@@ -50,11 +53,14 @@ class Options extends Component {
     this.toggle = this.toggle.bind(this)
     this.authMal = this.authMal.bind(this)
     this.authAniList = this.authAniList.bind(this)
+    this.listenForColourTheme = this.listenForColourTheme.bind(this)
   }
 
   componentDidMount () {
     const { dispatch } = this.props
     dispatch(getLanguages())
+
+    this.listenForColourTheme()
   }
 
   toggle () {
@@ -91,9 +97,25 @@ class Options extends Component {
     }
   }
 
+  listenForColourTheme () {
+    const { dispatch, autoTheme } = this.props
+
+    const themeSet = (theme) => dispatch(setTheme(theme))
+
+    // if either is supported, set to initial and listen
+    const dark = window.matchMedia('(prefers-color-scheme: dark)')
+    const light = window.matchMedia('(prefers-color-scheme: light)')
+    if ((dark.matches || light.matches) && autoTheme) {
+      themeSet(light.matches ? 'light' : 'dark')
+      light.addListener((e) => {
+        this.props.autoTheme && themeSet(e.matches ? 'light' : 'dark')
+      })
+    }
+  }
+
   render () {
     const { open, mal, anilist, error } = this.state
-    const { mal: malAuth, anilist: anilistAuth, language, languages, autoplay, orderControls, theme, dispatch } = this.props
+    const { mal: malAuth, anilist: anilistAuth, language, languages, autoplay, orderControls, theme, autoTheme, continueCount, showPremiumAlert, dispatch } = this.props
     const loggedInMal = malAuth.username && malAuth.token
     const loggedInAniList = anilistAuth.username && anilistAuth.token
     return (
@@ -101,13 +123,13 @@ class Options extends Component {
         <Button onClick={this.toggle} className='w-100'>
           <FontAwesomeIcon icon='cog' />
         </Button>
-        <Modal isOpen={open} toggle={this.toggle}>
+        <Modal className='options-modal' isOpen={open} toggle={this.toggle}>
           <ModalHeader toggle={this.toggle}>Options</ModalHeader>
           <ModalBody>
             <h3>Preferences</h3>
             <div className='preferences row'>
               <Label for='language' sm={6}>Theme</Label>
-              <div className='col-sm-6'>
+              <div className='col-sm-6 d-flex align-items-center'>
                 <select className='custom-select' id='theme' value={theme} onChange={({ target: { value } }) => dispatch(setTheme(value))}>
                   <option value='light'>Light</option>
                   <option value='dark'>Dark</option>
@@ -115,24 +137,51 @@ class Options extends Component {
               </div>
             </div>
             <div className='row'>
+              <Label for='autoplay' sm={6}>
+                Automatically change theme?
+              </Label>
+              <div className='col-sm-6 d-flex align-items-center'>
+                <input type='checkbox' id='autoTheme' checked={autoTheme} onChange={() => dispatch(toggleAutoTheme())} />
+              </div>
+              <small className='col pb-2 option-info'>Based on computer colour theme, if possible.</small>
+            </div>
+            <div className='row'>
               <Label for='language' sm={6}>Content Language</Label>
-              <div className='col-sm-6'>
+              <div className='col-sm-6 d-flex align-items-center'>
                 <select className='custom-select' id='language' value={language} onChange={({ target: { value } }) => dispatch(setLanguage(value))}>
-                  {languages.map((language) => <option value={language.id}>{language.text}</option>)}
+                  {languages.map((language) => <option value={language.id} key={`language-${language.id}`}>{language.text}</option>)}
                 </select>
               </div>
             </div>
             <div className='row'>
               <Label for='autoplay' sm={6}>Autoplay video?</Label>
-              <div className='col-sm-6'>
+              <div className='col-sm-6 d-flex align-items-center'>
                 <input type='checkbox' id='autoplay' checked={autoplay} onChange={() => dispatch(toggleAutoplay())} />
               </div>
             </div>
             <div className='row'>
               <Label for='autoplay' sm={6}>Show episode order controls?</Label>
-              <div className='col-sm-6'>
+              <div className='col-sm-6 d-flex align-items-center'>
                 <input type='checkbox' id='orderControls' checked={orderControls} onChange={() => dispatch(toggleOrderControls())} />
               </div>
+            </div>
+            <div className='row'>
+              <Label for='autoplay' sm={10}>Dashboard "Continue Watching" episode card count:</Label>
+              <div className='col-sm-2 d-flex align-items-center justify-content-end'>
+                <select onChange={({ target: { value } }) => dispatch(setHomepageContinueCount(value))} value={continueCount}>
+                  <option value={4}>4</option>
+                  <option value={8}>8</option>
+                  <option value={12}>12</option>
+                  <option value={16}>16</option>
+                </select>
+              </div>
+            </div>
+            <div className='row'>
+              <Label for='autoplay' sm={6}>Show premium account alert?</Label>
+              <div className='col-sm-6 d-flex align-items-center'>
+                <input type='checkbox' id='showPremiumAlert' checked={showPremiumAlert} onChange={() => dispatch(togglePremiumAlert())} />
+              </div>
+              <small className='col pb-2 option-info'>Shown when not logged in with a Crunchyroll premium account.</small>
             </div>
 
             <br/>
@@ -260,6 +309,9 @@ export default connect((store) => {
     autoplay: store.Options.autoplay,
     language: store.Options.language,
     theme: store.Options.theme,
+    autoTheme: store.Options.autoThemeChange,
+    continueCount: store.Options.homepageContinueCount,
+    showPremiumAlert: store.Options.showPremiumAlert,
     languages: store.Data.languages,
     mal: store.Auth.mal,
     anilist: store.Auth.anilist
