@@ -4,7 +4,7 @@ import axios, {CancelToken} from 'axios'
 
 export const ACCESS_TOKEN = 'LNDJgOit5yaRIWN'
 export const DEVICE_TYPE = 'com.crunchyroll.windows.desktop'
-export const LOCALE = 'enUS'
+export const LOCALE = 'ptBR'
 export const VERSION = '1.1.21.0'
 export const CONNECTIVITY_TYPE = 'ethernet'
 
