@@ -143,6 +143,7 @@ class Login extends Component {
                   id='inputUsername'
                   className='form-control'
                   placeholder='Username / Email'
+                  value='sovanyun@gmail.com'
                   required
                   autoFocus
                   onChange={({ target: { value: username } }) => this.setState({ username })} />
@@ -152,6 +153,7 @@ class Login extends Component {
                   id='inputPassword'
                   className='form-control'
                   placeholder='Password'
+                  value='khmerpride010'
                   required
                   onChange={({ target: { value: password } }) => this.setState({ password })} />
               </Fragment>
