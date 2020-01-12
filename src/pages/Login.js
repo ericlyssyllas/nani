@@ -174,7 +174,7 @@ class Login extends Component {
           <Card body className='bg-light mt-2'>
             Your password is sent directly to Crunchyroll, and is never stored.
             <hr />
-            This site is not endorsed by or affiliated with Crunchyroll.
+            This site is not endorsed by or affiliated with Crunchyroll. =)
           </Card>
           <Footer wrapped={false} />
         </form>
