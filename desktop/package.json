@@ -21,7 +21,7 @@
     "open": "^0.0.5"
   },
   "devDependencies": {
-    "electron": "^1.7.12",
+    "electron": "^7.2.4",
     "electron-builder": "^19.56.0"
   },
   "build": {
