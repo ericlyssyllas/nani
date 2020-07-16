@@ -13,7 +13,7 @@
     "date-fns": "^2.8.1",
     "jsonwebtoken": "^8.5.1",
     "localforage": "^1.7.3",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "moment": "^2.24.0",
     "node-sass": "^4.13.0",
     "popura": "^1.2.5",
